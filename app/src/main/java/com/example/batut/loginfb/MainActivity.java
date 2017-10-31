@@ -2,6 +2,7 @@ package com.example.batut.loginfb;
 
 import android.content.Intent;
 import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telecom.Call;
@@ -15,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.facebook.AccessToken;
+import com.facebook.appevents.AppEventsLogger;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -33,7 +35,7 @@ import com.google.firebase.auth.FirebaseUser;
 import static android.R.attr.data;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends FragmentActivity {
 
     private EditText txtEmail;
     private EditText txtSenha;
@@ -42,23 +44,34 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth.AuthStateListener mAuthListener;
 
     private LoginButton loginButton;
-    private CallbackManager callbackManager;
+    private CallbackManager mCallbackManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FacebookSdk.setApplicationId("1599670956749918");
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        AppEventsLogger.activateApp(this);
         setContentView(R.layout.activity_main);
 
         txtEmail = (EditText) findViewById(R.id.email);
         txtSenha = (EditText) findViewById(R.id.senha);
 
-         /*
-        FacebookSdk.sdkInitialize(getApplicationContext());
-        loginButton = (LoginButton)findViewById(R.id.login_button);
-        callbackManager = CallbackManager.Factory.create();*/
 
         mAuth = FirebaseAuth.getInstance();
 
+        Button botaoAcessar = (Button) findViewById(R.id.buttonAcessar);
+        botaoAcessar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent acesso = new Intent(MainActivity.this, Acesso.class);
+                startActivity(acesso);
+                finish();
+            }
+        });
+
+
+/*
         Button botaoAcessar = (Button) findViewById(R.id.buttonAcessar);
         botaoAcessar.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -82,34 +95,64 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+*/
 
-        /*
-        LoginManager.getInstance().registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+
+
+
+        mCallbackManager = CallbackManager.Factory.create();
+        LoginButton loginButton = (LoginButton)findViewById(R.id.login_button);
+        loginButton.registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
-                Intent acesso = new Intent(MainActivity.this, Acesso.class);
-                startActivity(acesso);
-                finish();
+                handleFacebookAccessToken(loginResult.getAccessToken());
             }
 
             @Override
             public void onCancel() {
-                Toast.makeText(MainActivity.this, "Erro", Toast.LENGTH_LONG).show();
+
             }
 
             @Override
             public void onError(FacebookException error) {
 
             }
-        });*/
-
-
-
-
-
+        });
 
 
     }
+
+
+
+    private void handleFacebookAccessToken(AccessToken token) {
+
+        AuthCredential credential = FacebookAuthProvider.getCredential(token.getToken());
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            Intent acesso = new Intent(MainActivity.this, Acesso.class);
+                            startActivity(acesso);
+                            finish();
+
+                        } else {
+                            Toast.makeText(MainActivity.this, "Falha na autenticação!", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // Pass the activity result back to the Facebook SDK
+        mCallbackManager.onActivityResult(requestCode, resultCode, data);
+    }
+
+
 
 
 }
