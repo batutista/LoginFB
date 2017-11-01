@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -29,6 +30,10 @@ import java.io.IOException;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class Acesso extends AppCompatActivity {
 
@@ -36,16 +41,70 @@ public class Acesso extends AppCompatActivity {
     private DatabaseReference mDatabase;
     private TextView nomeEscola;
     private TextView emailEscola;
+    private TextView pesquisaEscola;
+    private String nome;
+    private Button pesquisarEscola;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_acesso);
 
+
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();
 
         mDatabase = FirebaseDatabase.getInstance().getReference();
+
+        nomeEscola = (TextView)findViewById(R.id.nome_escola);
+        emailEscola = (TextView)findViewById(R.id.email_escola);
+        pesquisaEscola = (TextView)findViewById(R.id.nome_escola_pesquisa);
+
+
+        pesquisarEscola = (Button)findViewById(R.id.botao_pesquisar);
+        pesquisarEscola.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                nome = pesquisaEscola.getText().toString();
+
+
+
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl("http://mobile-aceite.tcu.gov.br/nossaEscolaRS/rest/escolas/nome/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build();
+
+
+
+                EscolaService service = retrofit.create(EscolaService.class);
+                Call<Escola> call = service.getEscola(nome);
+
+                call.enqueue(new Callback<Escola>() {
+
+                    @Override
+                    public void onResponse(Call<Escola> call, retrofit2.Response<Escola> response) {
+                        if (response.isSuccessful()) {
+                            Escola escola = response.body();
+
+                            String strNomeEscola = "Nome: " + escola.getNome();
+                            String strEmailEscola = "Email :" + escola.getEmail();
+
+                            nomeEscola.setText(strNomeEscola);
+                            emailEscola.setText(strEmailEscola);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<Escola> call, Throwable throwable) {
+                        Toast.makeText(Acesso.this,
+                                "Não foi possível realizar a requisição",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+
+
 
 
 
@@ -78,8 +137,4 @@ public class Acesso extends AppCompatActivity {
 
         mDatabase.child("user").child(userId).setValue(usuario);
     }
-
-
-
-
 }

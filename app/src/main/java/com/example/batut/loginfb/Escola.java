@@ -15,4 +15,12 @@ public class Escola {
         this.email = emailEsc;
     }
 
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
 }
